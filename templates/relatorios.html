@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios - LogiStock</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-warehouse"></i>
+                <h1>LogiStock</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+                <a href="/produtos" class="nav-link">
+                    <i class="fas fa-box"></i>
+                    Produtos
+                </a>
+                <a href="/estoque" class="nav-link">
+                    <i class="fas fa-cubes"></i>
+                    Estoque
+                </a>
+                <a href="/relatorios" class="nav-link active">
+                    <i class="fas fa-chart-bar"></i>
+                    Relatórios
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1><i class="fas fa-chart-bar"></i> Relatórios e Análises</h1>
+                <div class="header-actions">
+                    <button id="btn-export" class="btn btn-secondary">
+                        <i class="fas fa-download"></i>
+                        Exportar Dados
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cards de Resumo -->
+            <div class="report-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Produtos em Estoque Baixo</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-number" id="produtos-baixo">0</div>
+                        <p>produtos com estoque abaixo do mínimo</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-line"></i> Movimentações do Mês</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-number" id="movimentacoes-mes">0</div>
+                        <p>entradas e saídas registradas</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-dollar-sign"></i> Valor Total em Estoque</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-number" id="valor-estoque">R$ 0,00</div>
+                        <p>valor estimado do estoque</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="charts-section">
+                <div class="chart-container">
+                    <h3>Distribuição de Produtos por Categoria</h3>
+                    <canvas id="categoriesChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Movimentações dos Últimos 7 Dias</h3>
+                    <canvas id="movimentsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabelas de Relatórios -->
+            <div class="reports-section">
+                <div class="report-table-container">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Produtos com Estoque Baixo</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th>Estoque Atual</th>
+                                <th>Estoque Mínimo</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estoque-baixo-table">
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="report-table-container">
+                    <h3><i class="fas fa-history"></i> Movimentações Recentes</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Produto</th>
+                                <th>Tipo</th>
+                                <th>Quantidade</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movimentacoes-recentes-table">
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/relatorios.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produtos - LogiStock</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-warehouse"></i>
+                <h1>LogiStock</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+                <a href="/produtos" class="nav-link active">
+                    <i class="fas fa-box"></i>
+                    Produtos
+                </a>
+                <a href="/estoque" class="nav-link">
+                    <i class="fas fa-cubes"></i>
+                    Estoque
+                </a>
+                <a href="/relatorios" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    Relatórios
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1><i class="fas fa-box"></i> Gerenciamento de Produtos</h1>
+                <div class="header-actions">
+                    <button id="btn-buscar-nfc" class="btn btn-secondary">
+                        <i class="fas fa-wifi"></i>
+                        Buscar via NFC
+                    </button>
+                    <button id="btn-cadastrar-nfc" class="btn btn-success">
+                        <i class="fas fa-wifi"></i>
+                        Cadastrar via NFC
+                    </button>
+                    <button id="btn-add-produto" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Novo Produto
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <input type="text" id="search-produto" placeholder="Buscar produto...">
+                    <select id="filter-categoria">
+                        <option value="">Todas as categorias</option>
+                        <option value="Eletrônicos">Eletrônicos</option>
+                        <option value="Roupas">Roupas</option>
+                        <option value="Casa">Casa</option>
+                        <option value="Livros">Livros</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabela de Produtos -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Categoria</th>
+                            <th>Preço</th>
+                            <th>Código de Barras</th>
+                            <th>Estoque Atual</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="produtos-table-body">
+                        <!-- Os produtos serão carregados via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para Adicionar/Editar Produto -->
+    <div id="produto-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Novo Produto</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="produto-form" class="modal-form">
+                <div class="form-group">
+                    <label for="nome">Nome do Produto*</label>
+                    <input type="text" id="nome" name="nome" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="descricao">Descrição</label>
+                    <textarea id="descricao" name="descricao" rows="3"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="categoria">Categoria*</label>
+                        <select id="categoria" name="categoria" required>
+                            <option value="">Selecione uma categoria</option>
+                            <option value="Eletrônicos">Eletrônicos</option>
+                            <option value="Roupas">Roupas</option>
+                            <option value="Casa">Casa</option>
+                            <option value="Livros">Livros</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="preco">Preço (R$)*</label>
+                        <input type="number" id="preco" name="preco" step="0.01" min="0" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="codigo_barras">Código de Barras</label>
+                    <input type="text" id="codigo_barras" name="codigo_barras">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="quantidade">Quantidade Inicial</label>
+                        <input type="number" id="quantidade" name="quantidade" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estoque_minimo">Estoque Mínimo</label>
+                        <input type="number" id="estoque_minimo" name="estoque_minimo" min="0" value="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estoque_maximo">Estoque Máximo</label>
+                        <input type="number" id="estoque_maximo" name="estoque_maximo" min="0" value="100">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/nfc.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/produtos.js') }}"></script>
+</body>
+</html>

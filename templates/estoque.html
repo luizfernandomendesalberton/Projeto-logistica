@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estoque - LogiStock</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-warehouse"></i>
+                <h1>LogiStock</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+                <a href="/produtos" class="nav-link">
+                    <i class="fas fa-box"></i>
+                    Produtos
+                </a>
+                <a href="/estoque" class="nav-link active">
+                    <i class="fas fa-cubes"></i>
+                    Estoque
+                </a>
+                <a href="/relatorios" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    Relatórios
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1><i class="fas fa-cubes"></i> Controle de Estoque</h1>
+                <div class="header-actions">
+                    <button id="btn-buscar-estoque-nfc" class="btn btn-secondary">
+                        <i class="fas fa-wifi"></i>
+                        Buscar via NFC
+                    </button>
+                    <button id="btn-movimentar-nfc" class="btn btn-warning">
+                        <i class="fas fa-wifi"></i>
+                        Movimentar via NFC
+                    </button>
+                    <button id="btn-entrada" class="btn btn-success">
+                        <i class="fas fa-arrow-up"></i>
+                        Entrada
+                    </button>
+                    <button id="btn-saida" class="btn btn-danger">
+                        <i class="fas fa-arrow-down"></i>
+                        Saída
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <input type="text" id="search-estoque" placeholder="Buscar produto...">
+                    <select id="filter-status">
+                        <option value="">Todos os status</option>
+                        <option value="normal">Normal</option>
+                        <option value="baixo">Estoque Baixo</option>
+                        <option value="critico">Crítico</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabela de Estoque -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Categoria</th>
+                            <th>Quantidade Atual</th>
+                            <th>Estoque Mínimo</th>
+                            <th>Estoque Máximo</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="estoque-table-body">
+                        <!-- Os dados de estoque serão carregados via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para Movimentação de Estoque -->
+    <div id="movimentacao-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="movimentacao-title">Movimentação de Estoque</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="movimentacao-form" class="modal-form">
+                <div class="form-group">
+                    <label for="select-produto">Produto*</label>
+                    <select id="select-produto" name="produto_id" required>
+                        <option value="">Selecione um produto</option>
+                        <!-- Os produtos serão carregados via JavaScript -->
+                    </select>
+                </div>
+
+                <div class="product-info" id="product-info" style="display: none;">
+                    <div class="info-card">
+                        <h4>Informações do Produto</h4>
+                        <p><strong>Nome:</strong> <span id="info-nome"></span></p>
+                        <p><strong>Categoria:</strong> <span id="info-categoria"></span></p>
+                        <p><strong>Estoque Atual:</strong> <span id="info-estoque"></span></p>
+                        <p><strong>Estoque Mínimo:</strong> <span id="info-minimo"></span></p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tipo-movimento">Tipo de Movimento*</label>
+                        <select id="tipo-movimento" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="entrada">Entrada</option>
+                            <option value="saida">Saída</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quantidade-movimento">Quantidade*</label>
+                        <input type="number" id="quantidade-movimento" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="descricao-movimento">Descrição</label>
+                    <textarea id="descricao-movimento" rows="3" placeholder="Descreva o motivo da movimentação..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-mov">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Histórico de Movimentações -->
+    <div id="historico-modal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="historico-title">Histórico de Movimentações</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="historico-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Tipo</th>
+                                <th>Quantidade</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historico-table-body">
+                            <!-- O histórico será carregado via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/nfc.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/estoque.js') }}"></script>
+</body>
+</html>

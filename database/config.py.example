@@ -1,0 +1,54 @@
+# Arquivo de configuração de banco de dados
+# Renomeie este arquivo para config.py e configure suas credenciais
+
+# Configurações do MySQL
+MYSQL_CONFIG = {
+    'host': 'localhost',          # Endereço do servidor MySQL
+    'port': 3306,                 # Porta do MySQL (padrão: 3306)
+    'database': 'logistica_estoque',  # Nome do banco de dados
+    'user': 'root',               # Usuário do MySQL
+    'password': 'sua_senha_aqui', # Senha do MySQL
+    'charset': 'utf8mb4',         # Codificação de caracteres
+    'autocommit': True,           # Auto-commit das transações
+    'use_unicode': True,          # Usar Unicode
+    'sql_mode': 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'
+}
+
+# Configurações da aplicação Flask
+FLASK_CONFIG = {
+    'secret_key': 'sua_chave_secreta_aqui',  # Chave secreta para sessões
+    'debug': True,                           # Modo debug (desabilitar em produção)
+    'host': '0.0.0.0',                      # Host da aplicação
+    'port': 5000                            # Porta da aplicação
+}
+
+# Pool de conexões (para melhor performance)
+CONNECTION_POOL_CONFIG = {
+    'pool_name': 'logistica_pool',
+    'pool_size': 10,              # Número de conexões no pool
+    'pool_reset_session': True,   # Resetar sessão ao retornar conexão
+    'autocommit': True
+}
+
+# Configurações de logging
+LOGGING_CONFIG = {
+    'level': 'INFO',              # Nível de log (DEBUG, INFO, WARNING, ERROR)
+    'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    'file': 'logs/logistica.log'  # Arquivo de log
+}
+
+# Configurações de segurança
+SECURITY_CONFIG = {
+    'max_login_attempts': 5,      # Máximo de tentativas de login
+    'session_timeout': 3600,      # Timeout da sessão em segundos (1 hora)
+    'password_min_length': 8,     # Comprimento mínimo da senha
+    'enable_2fa': False           # Habilitar autenticação de dois fatores
+}
+
+# Configurações de backup
+BACKUP_CONFIG = {
+    'auto_backup': True,          # Backup automático
+    'backup_interval': 24,        # Intervalo em horas
+    'backup_path': 'backups/',    # Diretório de backup
+    'max_backups': 30            # Máximo de backups a manter
+}
