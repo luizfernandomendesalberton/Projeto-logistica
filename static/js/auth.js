@@ -55,13 +55,13 @@ class AuthManager {
             }
             
             if (adminLoginBtn) {
-                adminLoginBtn.addEventListener('click', () => this.confirmAdminAccess());
+                adminLoginBtn.addEventListener('click', () => this.handleAdminLogin());
             }
             
             if (adminForm) {
                 adminForm.addEventListener('submit', (e) => {
                     e.preventDefault();
-                    this.confirmAdminAccess();
+                    this.handleAdminLogin();
                 });
             }
         }
@@ -299,6 +299,59 @@ class AuthManager {
         }
         
         this.showInfo('Modo administrativo ativado. Use suas credenciais de administrador.');
+    }
+
+    async handleAdminLogin() {
+        // Obter credenciais do modal admin
+        const username = document.getElementById('admin-username').value.trim();
+        const password = document.getElementById('admin-password').value;
+
+        if (!username || !password) {
+            this.showError('Por favor, preencha todos os campos');
+            return;
+        }
+
+        this.showLoading('Realizando login administrativo...');
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    remember: false,
+                    is_admin: true
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                this.currentUser = data.user;
+                this.showSuccess('Login administrativo realizado com sucesso!');
+                
+                // Fechar modal
+                this.closeAdminModal();
+                
+                // Aguardar um pouco para mostrar o sucesso e redirecionar
+                setTimeout(() => {
+                    window.location.href = '/admin';
+                }, 1000);
+            } else {
+                this.hideLoading();
+                this.showError(data.message || 'Erro ao realizar login administrativo');
+                
+                // Limpar senha em caso de erro
+                document.getElementById('admin-password').value = '';
+            }
+        } catch (error) {
+            this.hideLoading();
+            this.showError('Erro de conexão. Tente novamente.');
+            console.error('Erro no login administrativo:', error);
+        }
     }
 
     togglePassword() {

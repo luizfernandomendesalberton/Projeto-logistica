@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Login Simples</title>
+</head>
+<body>
+    <h2>Teste de Login Administrativo</h2>
+    
+    <div>
+        <label>Usuário:</label>
+        <input type="text" id="user" value="admin">
+    </div>
+    <div>
+        <label>Senha:</label>
+        <input type="password" id="pass" value="admin123">
+    </div>
+    <button onclick="testarLogin()">Testar Login Admin</button>
+    
+    <div id="resultado" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+    async function testarLogin() {
+        const usuario = document.getElementById('user').value;
+        const senha = document.getElementById('pass').value;
+        const resultado = document.getElementById('resultado');
+        
+        resultado.innerHTML = '<p>Enviando login...</p>';
+        
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: usuario,
+                    password: senha,
+                    remember: false,
+                    is_admin: true
+                })
+            });
+            
+            const data = await response.json();
+            
+            resultado.innerHTML = `
+                <h3>Resposta do Servidor:</h3>
+                <p><strong>Status:</strong> ${response.status}</p>
+                <p><strong>Sucesso:</strong> ${data.success}</p>
+                <p><strong>Mensagem:</strong> ${data.message}</p>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            
+            if (data.success) {
+                resultado.innerHTML += '<p style="color: green;"><strong>LOGIN FUNCIONOU!</strong></p>';
+                
+                // Testar acesso ao admin
+                setTimeout(async () => {
+                    try {
+                        const adminResponse = await fetch('/admin');
+                        if (adminResponse.status === 200) {
+                            resultado.innerHTML += '<p style="color: green;"><strong>ACESSO AO /admin PERMITIDO!</strong></p>';
+                            // Redirecionar para admin
+                            window.location.href = '/admin';
+                        } else {
+                            resultado.innerHTML += `<p style="color: red;">Acesso ao /admin falhou: ${adminResponse.status}</p>`;
+                        }
+                    } catch (e) {
+                        resultado.innerHTML += `<p style="color: red;">Erro ao testar /admin: ${e}</p>`;
+                    }
+                }, 1000);
+            }
+            
+        } catch (error) {
+            resultado.innerHTML = `<p style="color: red;">Erro: ${error.message}</p>`;
+        }
+    }
+    </script>
+</body>
+</html>

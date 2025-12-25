@@ -88,7 +88,7 @@ def admin_required(f):
         
         # Verificar se é admin
         user = get_user_by_id(session['user_id'])
-        if not user or not user.get('is_admin'):
+        if not user or user.get('tipo') != 'admin':
             if request.is_json:
                 return jsonify({'error': 'Admin privileges required'}), 403
             return redirect(url_for('login'))
@@ -113,7 +113,7 @@ def permission_required(permission):
                 return redirect(url_for('login'))
             
             # Admin tem todas as permissões
-            if user.get('is_admin'):
+            if user.get('tipo') == 'admin':
                 return f(*args, **kwargs)
             
             # Verificar permissão específica
@@ -128,28 +128,28 @@ def permission_required(permission):
 
 def get_user_by_id(user_id):
     """Obter usuário por ID"""
-    query = "SELECT * FROM users WHERE id = %s AND active = 1"
+    query = "SELECT * FROM usuarios WHERE id = %s AND ativo = 1"
     users = db.execute_query(query, (user_id,))
     return users[0] if users else None
 
 def get_user_by_username(username):
     """Obter usuário por nome de usuário"""
-    query = "SELECT * FROM users WHERE username = %s AND active = 1"
+    query = "SELECT * FROM usuarios WHERE username = %s AND ativo = 1"
     users = db.execute_query(query, (username,))
     return users[0] if users else None
 
 def get_user_by_nfc(nfc_data):
     """Obter usuário por dados NFC"""
-    query = "SELECT * FROM users WHERE nfc_id = %s AND active = 1"
+    query = "SELECT * FROM usuarios WHERE nfc_id = %s AND ativo = 1"
     users = db.execute_query(query, (nfc_data,))
     return users[0] if users else None
 
 def user_has_permission(user_id, permission):
     """Verificar se usuário tem permissão específica"""
     query = """
-    SELECT COUNT(*) as count FROM user_permissions up
-    JOIN permissions p ON up.permission_id = p.id
-    WHERE up.user_id = %s AND p.name = %s
+    SELECT COUNT(*) as count FROM usuario_permissoes up
+    JOIN permissoes p ON up.permissao_id = p.id
+    WHERE up.usuario_id = %s AND p.nome = %s
     """
     result = db.execute_query(query, (user_id, permission))
     return result[0]['count'] > 0 if result else False
@@ -157,12 +157,12 @@ def user_has_permission(user_id, permission):
 def get_user_permissions(user_id):
     """Obter todas as permissões do usuário"""
     query = """
-    SELECT p.name FROM user_permissions up
-    JOIN permissions p ON up.permission_id = p.id
-    WHERE up.user_id = %s
+    SELECT p.nome FROM usuario_permissoes up
+    JOIN permissoes p ON up.permissao_id = p.id
+    WHERE up.usuario_id = %s
     """
     permissions = db.execute_query(query, (user_id,))
-    return [p['name'] for p in permissions] if permissions else []
+    return [p['nome'] for p in permissions] if permissions else []
 
 def create_session(user_id, remember=False):
     """Criar sessão do usuário"""
@@ -176,13 +176,13 @@ def create_session(user_id, remember=False):
         app.permanent_session_lifetime = timedelta(hours=8)
     
     # Atualizar último login
-    query = "UPDATE users SET last_login = NOW() WHERE id = %s"
+    query = "UPDATE usuarios SET data_ultimo_login = NOW() WHERE id = %s"
     db.execute_query(query, (user_id,))
     
     # Registrar na tabela de sessões
     session_id = secrets.token_urlsafe(32)
     session_query = """
-    INSERT INTO sessions (session_id, user_id, created_at, expires_at, active)
+    INSERT INTO sessoes (id, usuario_id, data_criacao, data_expiracao, ativo)
     VALUES (%s, %s, NOW(), DATE_ADD(NOW(), INTERVAL %s HOUR), 1)
     """
     hours = 720 if remember else 8  # 30 dias ou 8 horas
@@ -195,7 +195,7 @@ def destroy_session():
     """Destruir sessão atual"""
     if 'session_id' in session:
         # Marcar sessão como inativa no banco
-        query = "UPDATE sessions SET active = 0 WHERE session_id = %s"
+        query = "UPDATE sessoes SET ativo = 0 WHERE id = %s"
         db.execute_query(query, (session['session_id'],))
     
     session.clear()
@@ -219,53 +219,87 @@ def admin_panel():
     """Painel administrativo"""
     return render_template('admin.html')
 
+@app.route('/test')
+def test_page():
+    """Página de teste"""
+    return render_template('test_page.html')
+
+@app.route('/testlogin')
+def test_login_page():
+    """Página de teste de login simples"""
+    return render_template('test_login.html')
+
 @app.route('/api/auth/login', methods=['POST'])
 def api_login():
     """API de login"""
-    data = request.json
-    username = data.get('username', '').strip()
-    password = data.get('password', '')
-    remember = data.get('remember', False)
-    is_admin = data.get('is_admin', False)
-    
-    if not username or not password:
-        return jsonify({'success': False, 'message': 'Usuário e senha são obrigatórios'}), 400
-    
-    # Buscar usuário
-    user = get_user_by_username(username)
-    
-    if not user:
-        return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 401
-    
-    # Verificar senha
-    if not verify_password(password, user['password_hash']):
-        return jsonify({'success': False, 'message': 'Senha incorreta'}), 401
-    
-    # Verificar se está ativo
-    if not user['active']:
-        return jsonify({'success': False, 'message': 'Usuário inativo'}), 401
-    
-    # Se for acesso admin, verificar privilégios
-    if is_admin and not user['is_admin']:
-        return jsonify({'success': False, 'message': 'Usuário não possui privilégios administrativos'}), 403
-    
-    # Criar sessão
-    create_session(user['id'], remember)
-    
-    # Preparar dados do usuário para retorno
-    user_data = {
-        'id': user['id'],
-        'username': user['username'],
-        'email': user['email'],
-        'is_admin': user['is_admin'],
-        'permissions': get_user_permissions(user['id'])
-    }
-    
-    return jsonify({
-        'success': True,
-        'message': 'Login realizado com sucesso',
-        'user': user_data
-    })
+    try:
+        print(f"[LOGIN] Recebida requisição de login")
+        data = request.json
+        print(f"[LOGIN] Dados recebidos: {data}")
+        
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        remember = data.get('remember', False)
+        is_admin = data.get('is_admin', False)
+        
+        print(f"[LOGIN] Username: {username}, Is_admin: {is_admin}")
+        
+        if not username or not password:
+            print(f"[LOGIN] ERRO: Campos obrigatórios em branco")
+            return jsonify({'success': False, 'message': 'Usuário e senha são obrigatórios'}), 400
+        
+        # Buscar usuário
+        user = get_user_by_username(username)
+        print(f"[LOGIN] Usuário encontrado: {user is not None}")
+        
+        if not user:
+            print(f"[LOGIN] ERRO: Usuário não encontrado")
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 401
+        
+        # Verificar senha
+        password_valid = verify_password(password, user['password_hash'])
+        print(f"[LOGIN] Senha válida: {password_valid}")
+        
+        if not password_valid:
+            print(f"[LOGIN] ERRO: Senha incorreta")
+            return jsonify({'success': False, 'message': 'Senha incorreta'}), 401
+        
+        # Verificar se está ativo
+        if not user['ativo']:
+            print(f"[LOGIN] ERRO: Usuário inativo")
+            return jsonify({'success': False, 'message': 'Usuário inativo'}), 401
+        
+        # Se for acesso admin, verificar privilégios
+        if is_admin and user['tipo'] != 'admin':
+            print(f"[LOGIN] ERRO: Sem privilégios admin. Tipo: {user['tipo']}")
+            return jsonify({'success': False, 'message': 'Usuário não possui privilégios administrativos'}), 403
+        
+        # Criar sessão
+        session_id = create_session(user['id'], remember)
+        print(f"[LOGIN] Sessão criada: {session_id}")
+        
+        # Preparar dados do usuário para retorno
+        user_data = {
+            'id': user['id'],
+            'username': user['username'],
+            'email': user['email'],
+            'is_admin': user['tipo'] == 'admin',
+            'permissions': get_user_permissions(user['id'])
+        }
+        
+        print(f"[LOGIN] SUCESSO! User data: {user_data}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Login realizado com sucesso',
+            'user': user_data
+        })
+        
+    except Exception as e:
+        print(f"[LOGIN] EXCEÇÃO: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Erro interno: {str(e)}'}), 500
 
 @app.route('/api/auth/nfc-login', methods=['POST'])
 def api_nfc_login():
@@ -284,11 +318,11 @@ def api_nfc_login():
         return jsonify({'success': False, 'message': 'Cartão NFC não autorizado'}), 401
     
     # Verificar se está ativo
-    if not user['active']:
+    if not user['ativo']:
         return jsonify({'success': False, 'message': 'Usuário inativo'}), 401
     
     # Se for acesso admin, verificar privilégios
-    if is_admin and not user['is_admin']:
+    if is_admin and user['tipo'] != 'admin':
         return jsonify({'success': False, 'message': 'Cartão não possui privilégios administrativos'}), 403
     
     # Criar sessão
@@ -299,7 +333,7 @@ def api_nfc_login():
         'id': user['id'],
         'username': user['username'],
         'email': user['email'],
-        'is_admin': user['is_admin'],
+        'is_admin': user['tipo'] == 'admin',
         'permissions': get_user_permissions(user['id'])
     }
     
@@ -330,7 +364,7 @@ def check_session():
         'id': user['id'],
         'username': user['username'],
         'email': user['email'],
-        'is_admin': user['is_admin'],
+        'is_admin': user['tipo'] == 'admin',
         'permissions': get_user_permissions(user['id'])
     }
     
@@ -452,12 +486,13 @@ def admin_create_user():
     
     # Inserir usuário
     query = """
-    INSERT INTO users (username, password_hash, email, active, is_admin, created_at)
+    INSERT INTO usuarios (username, password_hash, email, ativo, tipo, created_at)
     VALUES (%s, %s, %s, %s, %s, NOW())
     """
     
     try:
-        user_id = db.execute_query(query, (username, password_hash, email, active, is_admin))
+        tipo = 'admin' if is_admin else 'user'
+        user_id = db.execute_query(query, (username, password_hash, email, active, tipo))
         if user_id:
             return jsonify({'success': True, 'message': 'Usuário criado com sucesso', 'user_id': user_id})
         else:
@@ -491,12 +526,13 @@ def admin_update_user(user_id):
     
     # Atualizar usuário
     query = """
-    UPDATE users SET username = %s, email = %s, is_admin = %s, active = %s
+    UPDATE usuarios SET username = %s, email = %s, tipo = %s, ativo = %s
     WHERE id = %s
     """
     
     try:
-        db.execute_query(query, (username, email, is_admin, active, user_id))
+        tipo = 'admin' if is_admin else 'user'
+        db.execute_query(query, (username, email, tipo, active, user_id))
         return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao atualizar usuário: {str(e)}'}), 500
@@ -751,7 +787,5 @@ def relatorio_movimentacoes():
     movimentacoes = db.execute_query(query)
     return jsonify(movimentacoes if movimentacoes else [])
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

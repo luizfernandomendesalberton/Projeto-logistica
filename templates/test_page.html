@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login</title>
+</head>
+<body>
+    <h1>Teste de Login Administrativo</h1>
+    
+    <div id="status">Aguardando...</div>
+    
+    <button id="testar-login">Testar Login Admin</button>
+    <button id="verificar-sessao">Verificar Sessão</button>
+    <button id="acessar-admin">Acessar /admin</button>
+    
+    <div id="resultado"></div>
+
+    <script>
+    document.getElementById('testar-login').onclick = async () => {
+        const status = document.getElementById('status');
+        const resultado = document.getElementById('resultado');
+        
+        status.textContent = 'Testando login...';
+        
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: 'admin',
+                    password: 'admin123',
+                    remember: false,
+                    is_admin: true
+                })
+            });
+            
+            const data = await response.json();
+            
+            status.textContent = `Status: ${response.status}`;
+            resultado.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            
+            if (data.success) {
+                status.textContent += ' - LOGIN OK!';
+            }
+        } catch (error) {
+            status.textContent = 'Erro: ' + error.message;
+            resultado.textContent = error.toString();
+        }
+    };
+    
+    document.getElementById('verificar-sessao').onclick = async () => {
+        const status = document.getElementById('status');
+        const resultado = document.getElementById('resultado');
+        
+        try {
+            const response = await fetch('/api/auth/check-session');
+            const data = await response.json();
+            
+            status.textContent = `Sessão Status: ${response.status}`;
+            resultado.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } catch (error) {
+            status.textContent = 'Erro ao verificar sessão: ' + error.message;
+            resultado.textContent = error.toString();
+        }
+    };
+    
+    document.getElementById('acessar-admin').onclick = () => {
+        window.location.href = '/admin';
+    };
+    </script>
+</body>
+</html>
