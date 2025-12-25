@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - LogiStock</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">
+                    <i class="fas fa-warehouse"></i>
+                    <h1>LogiStock</h1>
+                </div>
+                <p>Sistema de Logística de Estoque</p>
+            </div>
+
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="username">
+                        <i class="fas fa-user"></i>
+                        Usuário
+                    </label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i>
+                        Senha
+                    </label>
+                    <div class="password-input">
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                        <button type="button" id="toggle-password" class="password-toggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="remember-me" name="remember">
+                        <span class="checkmark"></span>
+                        Lembrar-me
+                    </label>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Entrar
+                </button>
+
+                <div class="admin-access">
+                    <button type="button" id="admin-login-btn" class="admin-btn">
+                        <i class="fas fa-user-shield"></i>
+                        Acesso Administrador
+                    </button>
+                </div>
+            </form>
+
+            <!-- NFC Login Section -->
+            <div class="nfc-section">
+                <div class="divider">
+                    <span>ou</span>
+                </div>
+                <button type="button" id="nfc-login-btn" class="nfc-login-btn">
+                    <i class="fas fa-wifi"></i>
+                    Login via NFC
+                </button>
+            </div>
+
+            <div class="login-footer">
+                <p>&copy; 2024 LogiStock. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Verificando credenciais...</p>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content admin-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-shield"></i> Login Administrador</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="admin-login-form" class="admin-form">
+                <div class="admin-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Área restrita - Apenas administradores autorizados</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin-username">Usuário Administrador</label>
+                    <input type="text" id="admin-username" name="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-password">Senha Administrador</label>
+                    <div class="password-input">
+                        <input type="password" id="admin-password" name="password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('admin-password', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-actions">
+                    <button type="button" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-admin-login">
+                        <i class="fas fa-shield-alt"></i>
+                        Entrar como Admin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+</body>
+</html>

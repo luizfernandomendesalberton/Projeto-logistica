@@ -6,6 +6,69 @@
     <title>Sistema de Logística de Estoque</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        // Verificar autenticação ao carregar a página
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/api/auth/check-session');
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await response.json();
+                if (!data.authenticated) {
+                    window.location.href = '/login';
+                    return;
+                }
+                // Usuário autenticado, continuar carregamento
+                window.currentUser = data.user;
+                initializePage();
+            } catch (error) {
+                console.error('Erro ao verificar autenticação:', error);
+                window.location.href = '/login';
+            }
+        });
+
+        function initializePage() {
+            // Adicionar informações do usuário
+            addUserInfo();
+            // Continuar com o carregamento normal da página
+            if (typeof loadDashboardData === 'function') {
+                loadDashboardData();
+            }
+        }
+
+        function addUserInfo() {
+            if (window.currentUser) {
+                // Adicionar botão de logout e info do usuário na navbar
+                const navMenu = document.querySelector('.nav-menu');
+                const userSection = document.createElement('div');
+                userSection.className = 'nav-user';
+                userSection.innerHTML = `
+                    <div class="user-info">
+                        <span class="user-name">${window.currentUser.username}</span>
+                        ${window.currentUser.is_admin ? '<span class="admin-badge">Admin</span>' : ''}
+                    </div>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                `;
+                navMenu.appendChild(userSection);
+            }
+        }
+
+        async function logout() {
+            if (confirm('Deseja realmente sair do sistema?')) {
+                try {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                } catch (error) {
+                    console.error('Erro no logout:', error);
+                } finally {
+                    window.location.href = '/login';
+                }
+            }
+        }
+    </script>
 </head>
 <body>
     <nav class="navbar">
