@@ -219,6 +219,18 @@ def admin_panel():
     """Painel administrativo"""
     return render_template('admin.html')
 
+@app.route('/admin/permissions')
+@admin_required
+def admin_permissions_page():
+    """Página de gerenciamento de permissões"""
+    return render_template('admin_permissions.html')
+
+@app.route('/admin/logs')
+@admin_required
+def admin_logs_page():
+    """Página de logs do sistema"""
+    return render_template('admin_logs.html')
+
 @app.route('/test')
 def test_page():
     """Página de teste"""
@@ -408,27 +420,26 @@ def admin_stats():
     stats = {}
     
     # Total de usuários
-    result = db.execute_query("SELECT COUNT(*) as count FROM users WHERE active = 1")
+    result = db.execute_query("SELECT COUNT(*) as count FROM usuarios WHERE ativo = 1")
     stats['total_users'] = result[0]['count'] if result else 0
     
-    # Total de produtos
-    result = db.execute_query("SELECT COUNT(*) as count FROM produtos")
-    stats['total_products'] = result[0]['count'] if result else 0
+    # Total de administradores
+    result = db.execute_query("SELECT COUNT(*) as count FROM usuarios WHERE tipo = 'admin' AND ativo = 1")
+    stats['total_admins'] = result[0]['count'] if result else 0
     
-    # Total de movimentações do mês
+    # Usuários online (com sessão ativa nas últimas 24h)
     result = db.execute_query("""
-        SELECT COUNT(*) as count FROM movimentacao_estoque 
-        WHERE DATE(data_movimentacao) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        SELECT COUNT(DISTINCT usuario_id) as count FROM sessoes 
+        WHERE ativo = 1 AND data_criacao >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
     """)
-    stats['total_movements'] = result[0]['count'] if result else 0
+    stats['users_online'] = result[0]['count'] if result else 0
     
-    # Alertas de estoque baixo
-    result = db.execute_query("""
-        SELECT COUNT(*) as count FROM estoque e
-        JOIN produtos p ON e.produto_id = p.id
-        WHERE e.quantidade <= e.estoque_minimo
-    """)
-    stats['total_alerts'] = result[0]['count'] if result else 0
+    # Total de produtos (se a tabela existir)
+    try:
+        result = db.execute_query("SELECT COUNT(*) as count FROM produtos")
+        stats['total_products'] = result[0]['count'] if result else 0
+    except:
+        stats['total_products'] = 0
     
     return jsonify(stats)
 
@@ -436,17 +447,34 @@ def admin_stats():
 @admin_required
 def admin_get_users():
     """Listar todos os usuários"""
+    print("[ADMIN] Carregando lista de usuários")
     query = """
-    SELECT id, username, email, active, is_admin, created_at, last_login
-    FROM users ORDER BY created_at DESC
+    SELECT id, username, nome, email, ativo, tipo, data_criacao, data_ultimo_login
+    FROM usuarios ORDER BY data_criacao DESC
     """
     users = db.execute_query(query)
+    print(f"[ADMIN] Encontrados {len(users or [])} usuários")
     
-    # Adicionar permissões para cada usuário
+    # Adicionar permissões e ajustar formato para cada usuário
     for user in users or []:
+        user['active'] = user['ativo']  # Compatibilidade com frontend
+        user['is_admin'] = user['tipo'] == 'admin'
+        user['created_at'] = user['data_criacao']
+        user['last_login'] = user['data_ultimo_login']
         user['permissions'] = get_user_permissions(user['id'])
     
     return jsonify(users or [])
+
+@app.route('/api/admin/permissions', methods=['GET'])
+@admin_required
+def admin_get_permissions():
+    """Listar todas as permissões disponíveis"""
+    print("[ADMIN] Carregando lista de permissões")
+    
+    permissions = get_predefined_permissions()
+    
+    print(f"[ADMIN] Retornando {len(permissions)} permissões")
+    return jsonify(permissions)
 
 @app.route('/api/admin/users/<int:user_id>', methods=['GET'])
 @admin_required
@@ -456,8 +484,12 @@ def admin_get_user(user_id):
     if not user:
         return jsonify({'error': 'Usuário não encontrado'}), 404
     
-    # Remover dados sensíveis
+    # Remover dados sensíveis e ajustar campos
     user.pop('password_hash', None)
+    user['active'] = user['ativo']  # Compatibilidade com frontend
+    user['is_admin'] = user['tipo'] == 'admin'
+    user['created_at'] = user['data_criacao']
+    user['last_login'] = user['data_ultimo_login']
     user['permissions'] = get_user_permissions(user['id'])
     
     return jsonify(user)
@@ -470,6 +502,7 @@ def admin_create_user():
     
     username = data.get('username', '').strip()
     password = data.get('password', '')
+    nome = data.get('nome', '').strip() or username  # Se não informado, usar username
     email = data.get('email', '').strip()
     is_admin = data.get('is_admin', False)
     active = data.get('active', True)
@@ -486,13 +519,13 @@ def admin_create_user():
     
     # Inserir usuário
     query = """
-    INSERT INTO usuarios (username, password_hash, email, ativo, tipo, created_at)
-    VALUES (%s, %s, %s, %s, %s, NOW())
+    INSERT INTO usuarios (username, password_hash, nome, email, ativo, tipo, data_criacao)
+    VALUES (%s, %s, %s, %s, %s, %s, NOW())
     """
     
     try:
-        tipo = 'admin' if is_admin else 'user'
-        user_id = db.execute_query(query, (username, password_hash, email, active, tipo))
+        tipo = 'admin' if is_admin else 'usuario'
+        user_id = db.execute_query(query, (username, password_hash, nome, email, active, tipo))
         if user_id:
             return jsonify({'success': True, 'message': 'Usuário criado com sucesso', 'user_id': user_id})
         else:
@@ -512,6 +545,7 @@ def admin_update_user(user_id):
         return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
     
     username = data.get('username', '').strip()
+    nome = data.get('nome', '').strip() or username  # Se não informado, usar username
     email = data.get('email', '').strip()
     is_admin = data.get('is_admin', False)
     active = data.get('active', True)
@@ -526,13 +560,13 @@ def admin_update_user(user_id):
     
     # Atualizar usuário
     query = """
-    UPDATE usuarios SET username = %s, email = %s, tipo = %s, ativo = %s
+    UPDATE usuarios SET username = %s, nome = %s, email = %s, tipo = %s, ativo = %s
     WHERE id = %s
     """
     
     try:
-        tipo = 'admin' if is_admin else 'user'
-        db.execute_query(query, (username, email, tipo, active, user_id))
+        tipo = 'admin' if is_admin else 'usuario'
+        db.execute_query(query, (username, nome, email, tipo, active, user_id))
         return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao atualizar usuário: {str(e)}'}), 500
@@ -569,14 +603,6 @@ def admin_delete_user(user_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao excluir usuário: {str(e)}'}), 500
 
-@app.route('/api/admin/permissions', methods=['GET'])
-@admin_required
-def admin_get_permissions():
-    """Listar todas as permissões disponíveis"""
-    query = "SELECT * FROM permissions ORDER BY name"
-    permissions = db.execute_query(query)
-    return jsonify(permissions or [])
-
 @app.route('/api/admin/users/<int:user_id>/permissions', methods=['PUT'])
 @admin_required
 def admin_update_user_permissions(user_id):
@@ -590,26 +616,141 @@ def admin_update_user_permissions(user_id):
         return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
     
     try:
-        # Remover permissões antigas
-        delete_query = "DELETE FROM user_permissions WHERE user_id = %s"
+        # Primeiro, garantir que as permissões existam na tabela permissoes
+        for permission_id in permissions:
+            # Verificar se a permissão existe, se não, criar
+            check_query = "SELECT id FROM permissoes WHERE nome = %s"
+            existing = db.execute_query(check_query, (permission_id,))
+            
+            if not existing:
+                # Criar a permissão
+                insert_perm_query = "INSERT INTO permissoes (nome, descricao) VALUES (%s, %s)"
+                # Encontrar descrição da permissão na lista predefinida
+                perm_info = next((p for p in get_predefined_permissions() if p['id'] == permission_id), None)
+                description = perm_info['description'] if perm_info else f'Permissão {permission_id}'
+                db.execute_query(insert_perm_query, (permission_id, description))
+        
+        # Remover permissões antigas do usuário
+        delete_query = "DELETE FROM usuario_permissoes WHERE usuario_id = %s"
         db.execute_query(delete_query, (user_id,))
         
         # Adicionar novas permissões
         if permissions:
-            # Buscar IDs das permissões
-            placeholders = ','.join(['%s'] * len(permissions))
-            perm_query = f"SELECT id, name FROM permissions WHERE name IN ({placeholders})"
-            perm_results = db.execute_query(perm_query, permissions)
-            
-            if perm_results:
-                # Inserir permissões do usuário
-                insert_query = "INSERT INTO user_permissions (user_id, permission_id) VALUES (%s, %s)"
-                for perm in perm_results:
-                    db.execute_query(insert_query, (user_id, perm['id']))
+            for permission_id in permissions:
+                # Buscar ID da permissão
+                perm_query = "SELECT id FROM permissoes WHERE nome = %s"
+                perm_result = db.execute_query(perm_query, (permission_id,))
+                
+                if perm_result:
+                    # Inserir permissão do usuário
+                    insert_query = "INSERT INTO usuario_permissoes (usuario_id, permissao_id) VALUES (%s, %s)"
+                    db.execute_query(insert_query, (user_id, perm_result[0]['id']))
         
+        print(f"[ADMIN] Permissões do usuário {user_id} atualizadas: {permissions}")
         return jsonify({'success': True, 'message': 'Permissões atualizadas com sucesso'})
     except Exception as e:
+        print(f"[ADMIN] Erro ao atualizar permissões: {e}")
         return jsonify({'success': False, 'message': f'Erro ao atualizar permissões: {str(e)}'}), 500
+
+def get_predefined_permissions():
+    """Retorna lista de permissões predefinidas"""
+    return [
+        {
+            'id': 'visualizar_dashboard',
+            'name': 'Visualizar Dashboard',
+            'description': 'Permite visualizar o dashboard principal'
+        },
+        {
+            'id': 'gerenciar_produtos',
+            'name': 'Gerenciar Produtos',
+            'description': 'Permite criar, editar e excluir produtos'
+        },
+        {
+            'id': 'visualizar_produtos',
+            'name': 'Visualizar Produtos',
+            'description': 'Permite visualizar a lista de produtos'
+        },
+        {
+            'id': 'gerenciar_estoque',
+            'name': 'Gerenciar Estoque',
+            'description': 'Permite modificar quantidades em estoque'
+        },
+        {
+            'id': 'visualizar_estoque',
+            'name': 'Visualizar Estoque',
+            'description': 'Permite visualizar informações de estoque'
+        },
+        {
+            'id': 'visualizar_relatorios',
+            'name': 'Visualizar Relatórios',
+            'description': 'Permite visualizar relatórios do sistema'
+        },
+        {
+            'id': 'exportar_dados',
+            'name': 'Exportar Dados',
+            'description': 'Permite exportar dados em diversos formatos'
+        },
+        {
+            'id': 'usar_nfc',
+            'name': 'Usar NFC',
+            'description': 'Permite usar funcionalidades NFC'
+        },
+        {
+            'id': 'gerenciar_usuarios',
+            'name': 'Gerenciar Usuários',
+            'description': 'Permite criar, editar e excluir usuários'
+        },
+        {
+            'id': 'alterar_permissoes',
+            'name': 'Alterar Permissões',
+            'description': 'Permite modificar permissões de outros usuários'
+        }
+    ]
+
+@app.route('/api/admin/users/<int:user_id>/logs', methods=['GET'])
+@admin_required
+def admin_get_user_logs(user_id):
+    """Obter logs de atividade do usuário"""
+    try:
+        # Por enquanto, retornar logs mockados da tabela sessoes e movimentacoes
+        logs = []
+        
+        # Logs de sessões (logins)
+        session_logs = db.execute_query("""
+            SELECT 'LOGIN' as tipo, data_login as data_hora, 
+                   CONCAT('Login realizado de ', ip_address) as mensagem,
+                   'Login do usuário' as detalhes
+            FROM sessoes 
+            WHERE user_id = %s 
+            ORDER BY data_login DESC 
+            LIMIT 50
+        """, (user_id,))
+        
+        if session_logs:
+            logs.extend(session_logs)
+        
+        # Logs de movimentações (se o usuário fez movimentações)
+        movement_logs = db.execute_query("""
+            SELECT 'MOVIMENTACAO' as tipo, data_movimentacao as data_hora,
+                   CONCAT('Movimentação: ', tipo_movimentacao, ' - Produto ID ', produto_id) as mensagem,
+                   CONCAT('Quantidade: ', quantidade, ', Observação: ', COALESCE(observacoes, 'Nenhuma')) as detalhes
+            FROM movimentacoes 
+            WHERE usuario_id = %s 
+            ORDER BY data_movimentacao DESC 
+            LIMIT 50
+        """, (user_id,))
+        
+        if movement_logs:
+            logs.extend(movement_logs)
+        
+        # Ordenar logs por data
+        logs.sort(key=lambda x: x['data_hora'] if x['data_hora'] else '', reverse=True)
+        
+        return jsonify(logs[:100])  # Limitar a 100 logs mais recentes
+        
+    except Exception as e:
+        print(f"[ADMIN] Erro ao buscar logs do usuário {user_id}: {e}")
+        return jsonify({'success': False, 'message': f'Erro ao buscar logs: {str(e)}'}), 500
 
 # API Routes (com autenticação)
 # API Routes (com autenticação)
@@ -787,5 +928,29 @@ def relatorio_movimentacoes():
     movimentacoes = db.execute_query(query)
     return jsonify(movimentacoes if movimentacoes else [])
 
+@app.route('/admin_test')
+@admin_required
+def admin_test_page():
+    """Página de teste do admin"""
+    return render_template('admin_test.html')
+
+@app.route('/test_admin.html')
+def test_admin_page():
+    """Página de teste do admin"""
+    with open('test_admin.html', 'r', encoding='utf-8') as f:
+        return f.read()
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("Iniciando servidor Flask em http://127.0.0.1:5000")
+    try:
+        app.run(
+            debug=True, 
+            host='127.0.0.1',  # Apenas localhost
+            port=5000,
+            threaded=True,      # Melhor performance
+            use_reloader=True   # Auto-reload em desenvolvimento
+        )
+    except Exception as e:
+        print(f"Erro ao iniciar servidor: {e}")
+    finally:
+        print("Servidor finalizado")

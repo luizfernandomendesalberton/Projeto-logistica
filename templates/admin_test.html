@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .badge { padding: 2px 8px; border-radius: 4px; }
+        .status { padding: 2px 8px; border-radius: 4px; }
+        .stat-card { display: inline-block; margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Teste Admin - Gerenciamento de Usuários</h1>
+    
+    <!-- Estatísticas -->
+    <div>
+        <div class="stat-card">
+            <h3 id="total-users">0</h3>
+            <p>Usuários Ativos</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="total-admins">0</h3>
+            <p>Administradores</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="users-online">0</h3>
+            <p>Online Agora</p>
+        </div>
+    </div>
+    
+    <!-- Tabela de usuários -->
+    <h2>Usuários</h2>
+    <table>
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select-all"></th>
+                <th>ID</th>
+                <th>Usuário</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Último Login</th>
+                <th>Permissões</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="users-table-body">
+            <tr><td colspan="10">Carregando...</td></tr>
+        </tbody>
+    </table>
+
+    <script src="{{ url_for('static', filename='js/admin_test.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Admin API</title>
+</head>
+<body>
+    <h1>Teste das APIs Admin</h1>
+    <div id="status">Testando...</div>
+    <div id="results"></div>
+
+    <script>
+        async function testarAPIs() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                statusDiv.innerHTML = 'Fazendo login...';
+                
+                // Fazer login
+                const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123',
+                        is_admin: true
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error('Falha no login: ' + loginResponse.status);
+                }
+                
+                statusDiv.innerHTML = 'Login OK. Testando APIs...';
+                
+                // Testar API de usuários
+                const usersResponse = await fetch('/api/admin/users');
+                const usersStatus = usersResponse.status;
+                
+                if (usersResponse.ok) {
+                    const users = await usersResponse.json();
+                    resultsDiv.innerHTML += `
+                        <h3>API Usuários: ✅ Status ${usersStatus}</h3>
+                        <p>Tipo: ${typeof users}</p>
+                        <p>É array: ${Array.isArray(users)}</p>
+                        <p>Quantidade: ${users.length}</p>
+                        <pre>${JSON.stringify(users[0] || {}, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML += `<h3>API Usuários: ❌ Status ${usersStatus}</h3>`;
+                }
+                
+                // Testar API de stats
+                const statsResponse = await fetch('/api/admin/stats');
+                const statsStatus = statsResponse.status;
+                
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    resultsDiv.innerHTML += `
+                        <h3>API Stats: ✅ Status ${statsStatus}</h3>
+                        <pre>${JSON.stringify(stats, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML += `<h3>API Stats: ❌ Status ${statsStatus}</h3>`;
+                }
+                
+                statusDiv.innerHTML = 'Testes concluídos!';
+                
+            } catch (error) {
+                statusDiv.innerHTML = 'Erro: ' + error.message;
+                resultsDiv.innerHTML = '<h3>❌ Erro no teste</h3><p>' + error.stack + '</p>';
+            }
+        }
+        
+        // Executar quando a página carregar
+        window.addEventListener('load', testarAPIs);
+    </script>
+</body>
+</html>

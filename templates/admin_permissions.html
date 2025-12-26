@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Permissões - Sistema Logística</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <nav class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-boxes"></i>
+                    <h2>Admin Panel</h2>
+                </div>
+                <p>Sistema de Logística</p>
+            </div>
+            
+            <div class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="/admin" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/admin" class="nav-link">
+                        <i class="fas fa-users-cog"></i>
+                        Usuários
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/admin/permissions" class="nav-link active">
+                        <i class="fas fa-key"></i>
+                        Permissões
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/admin/logs" class="nav-link">
+                        <i class="fas fa-history"></i>
+                        Logs
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-arrow-left"></i>
+                        Voltar ao Sistema
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/logout" class="nav-link logout" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sair
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="main-content">
+            <div class="admin-header">
+                <div class="header-left">
+                    <h1><i class="fas fa-key"></i> Gerenciar Permissões</h1>
+                    <p>Configure as permissões do sistema</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="newPermissionBtn">
+                        <i class="fas fa-plus"></i>
+                        Nova Permissão
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros e busca -->
+            <div class="filters-section">
+                <div class="filters-left">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="permissionSearch" placeholder="Buscar permissões...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de permissões -->
+            <div class="table-section">
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Usuários com Permissão</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="permissions-table-body">
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para adicionar/editar permissão -->
+    <div id="permissionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="permission-modal-title">Nova Permissão</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="permissionForm">
+                <input type="hidden" id="permissionId" name="id">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="permissionName">Nome *</label>
+                        <input type="text" id="permissionName" name="nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="permissionCategory">Categoria</label>
+                        <select id="permissionCategory" name="categoria">
+                            <option value="dashboard">Dashboard</option>
+                            <option value="produtos">Produtos</option>
+                            <option value="estoque">Estoque</option>
+                            <option value="movimentacao">Movimentação</option>
+                            <option value="relatorios">Relatórios</option>
+                            <option value="admin">Administração</option>
+                            <option value="sistema">Sistema</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="permissionDescription">Descrição</label>
+                        <textarea id="permissionDescription" name="descricao" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelPermissionBtn">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/admin_permissions_simple.js"></script>
+</body>
+</html>
