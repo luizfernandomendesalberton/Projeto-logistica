@@ -94,10 +94,9 @@ class AuthManager {
                 const data = await response.json();
                 if (data.authenticated) {
                     this.currentUser = data.user;
-                    // Redirecionar para o sistema se já estiver logado
-                    if (data.user.is_admin) {
-                        window.location.href = '/admin';
-                    } else {
+                    // Só redirecionar se estiver na página de login
+                    if (window.location.pathname === '/login') {
+                        // Usuário já logado, redirecionar para dashboard
                         window.location.href = '/';
                     }
                 }
@@ -110,9 +109,19 @@ class AuthManager {
     async handleLogin(e) {
         e.preventDefault();
         
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value;
-        const remember = document.getElementById('remember').checked;
+        const usernameElement = document.getElementById('username');
+        const passwordElement = document.getElementById('password');
+        const rememberCheckbox = document.getElementById('remember-me');
+        
+        if (!usernameElement || !passwordElement) {
+            this.showError('Erro: elementos de formulário não encontrados');
+            console.error('Elementos não encontrados:', { usernameElement, passwordElement });
+            return;
+        }
+        
+        const username = usernameElement.value.trim();
+        const password = passwordElement.value;
+        const remember = rememberCheckbox ? rememberCheckbox.checked : false;
 
         if (!username || !password) {
             this.showError('Por favor, preencha todos os campos');
@@ -131,7 +140,7 @@ class AuthManager {
                     username: username,
                     password: password,
                     remember: remember,
-                    is_admin: this.isAdmin
+                    is_admin: false  // Login normal sempre é false
                 })
             });
 
@@ -143,18 +152,18 @@ class AuthManager {
                 
                 // Aguardar um pouco para mostrar o sucesso
                 setTimeout(() => {
-                    if (this.isAdmin || data.user.is_admin) {
-                        window.location.href = '/admin';
-                    } else {
-                        window.location.href = '/';
-                    }
+                    // Login normal sempre vai para o dashboard
+                    window.location.href = '/';
                 }, 1000);
             } else {
                 this.hideLoading();
                 this.showError(data.message || 'Erro ao realizar login');
                 
                 // Limpar senha em caso de erro
-                document.getElementById('password').value = '';
+                const passwordElement = document.getElementById('password');
+                if (passwordElement) {
+                    passwordElement.value = '';
+                }
             }
         } catch (error) {
             this.hideLoading();
@@ -303,8 +312,17 @@ class AuthManager {
 
     async handleAdminLogin() {
         // Obter credenciais do modal admin
-        const username = document.getElementById('admin-username').value.trim();
-        const password = document.getElementById('admin-password').value;
+        const usernameElement = document.getElementById('admin-username');
+        const passwordElement = document.getElementById('admin-password');
+        
+        if (!usernameElement || !passwordElement) {
+            this.showError('Erro: elementos de formulário admin não encontrados');
+            console.error('Elementos admin não encontrados:', { usernameElement, passwordElement });
+            return;
+        }
+        
+        const username = usernameElement.value.trim();
+        const password = passwordElement.value;
 
         if (!username || !password) {
             this.showError('Por favor, preencha todos os campos');
@@ -345,7 +363,10 @@ class AuthManager {
                 this.showError(data.message || 'Erro ao realizar login administrativo');
                 
                 // Limpar senha em caso de erro
-                document.getElementById('admin-password').value = '';
+                const adminPasswordElement = document.getElementById('admin-password');
+                if (adminPasswordElement) {
+                    adminPasswordElement.value = '';
+                }
             }
         } catch (error) {
             this.hideLoading();
@@ -356,7 +377,18 @@ class AuthManager {
 
     togglePassword() {
         const passwordField = document.getElementById('password');
-        const toggleIcon = document.getElementById('toggle-password').querySelector('i');
+        const toggleButton = document.getElementById('toggle-password');
+        
+        if (!passwordField || !toggleButton) {
+            console.error('Elementos para toggle de senha não encontrados:', { passwordField, toggleButton });
+            return;
+        }
+        
+        const toggleIcon = toggleButton.querySelector('i');
+        if (!toggleIcon) {
+            console.error('Ícone do toggle não encontrado');
+            return;
+        }
         
         if (passwordField.type === 'password') {
             passwordField.type = 'text';
@@ -565,7 +597,7 @@ class AuthManager {
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
     // Só inicializar na página de login
-    if (window.location.pathname === '/login' || document.getElementById('loginForm')) {
+    if (window.location.pathname === '/login') {
         window.authManager = new AuthManager();
     }
 });

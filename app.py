@@ -207,10 +207,8 @@ def login():
     if 'user_id' in session:
         user = get_user_by_id(session['user_id'])
         if user:
-            if user.get('is_admin'):
-                return redirect('/admin')
-            else:
-                return redirect('/')
+            # Usuário já logado, redirecionar para dashboard principal
+            return redirect('/')
     return render_template('login.html')
 
 @app.route('/admin')
@@ -360,6 +358,12 @@ def api_logout():
     """API de logout"""
     destroy_session()
     return jsonify({'success': True, 'message': 'Logout realizado com sucesso'})
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    """Logout via GET (redirecionamento)"""
+    destroy_session()
+    return redirect(url_for('login'))
 
 @app.route('/api/auth/check-session', methods=['GET'])
 def check_session():
@@ -585,18 +589,18 @@ def admin_delete_user(user_id):
         return jsonify({'success': False, 'message': 'Não é possível excluir seu próprio usuário'}), 400
     
     # Não permitir exclusão de admin se for o último
-    if user['is_admin']:
-        admin_count = db.execute_query("SELECT COUNT(*) as count FROM users WHERE is_admin = 1 AND active = 1")
+    if user['tipo'] == 'admin':
+        admin_count = db.execute_query("SELECT COUNT(*) as count FROM usuarios WHERE tipo = 'admin' AND ativo = 1")
         if admin_count and admin_count[0]['count'] <= 1:
             return jsonify({'success': False, 'message': 'Não é possível excluir o último administrador'}), 400
     
     try:
         # Marcar como inativo em vez de excluir
-        query = "UPDATE users SET active = 0 WHERE id = %s"
+        query = "UPDATE usuarios SET ativo = 0 WHERE id = %s"
         db.execute_query(query, (user_id,))
         
         # Desativar todas as sessões do usuário
-        session_query = "UPDATE sessions SET active = 0 WHERE user_id = %s"
+        session_query = "UPDATE sessoes SET ativo = 0 WHERE usuario_id = %s"
         db.execute_query(session_query, (user_id,))
         
         return jsonify({'success': True, 'message': 'Usuário excluído com sucesso'})
@@ -607,15 +611,21 @@ def admin_delete_user(user_id):
 @admin_required
 def admin_update_user_permissions(user_id):
     """Atualizar permissões do usuário"""
-    data = request.json
-    permissions = data.get('permissions', [])
-    
-    # Verificar se usuário existe
-    user = get_user_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
-    
     try:
+        data = request.json
+        permissions = data.get('permissions', [])
+        
+        print(f"[ADMIN] Recebida solicitação para atualizar permissões do usuário {user_id}")
+        print(f"[ADMIN] Permissões recebidas: {permissions}")
+        
+        # Verificar se usuário existe
+        user = get_user_by_id(user_id)
+        if not user:
+            print(f"[ADMIN] Usuário {user_id} não encontrado")
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        print(f"[ADMIN] Usuário encontrado: {user['username']}")
+        
         # Primeiro, garantir que as permissões existam na tabela permissoes
         for permission_id in permissions:
             # Verificar se a permissão existe, se não, criar
@@ -623,19 +633,27 @@ def admin_update_user_permissions(user_id):
             existing = db.execute_query(check_query, (permission_id,))
             
             if not existing:
+                print(f"[ADMIN] Criando permissão {permission_id}")
                 # Criar a permissão
                 insert_perm_query = "INSERT INTO permissoes (nome, descricao) VALUES (%s, %s)"
                 # Encontrar descrição da permissão na lista predefinida
                 perm_info = next((p for p in get_predefined_permissions() if p['id'] == permission_id), None)
                 description = perm_info['description'] if perm_info else f'Permissão {permission_id}'
                 db.execute_query(insert_perm_query, (permission_id, description))
+            else:
+                print(f"[ADMIN] Permissão {permission_id} já existe")
         
         # Remover permissões antigas do usuário
+        print(f"[ADMIN] Removendo permissões antigas do usuário {user_id}")
         delete_query = "DELETE FROM usuario_permissoes WHERE usuario_id = %s"
-        db.execute_query(delete_query, (user_id,))
+        result = db.execute_query(delete_query, (user_id,))
+        print(f"[ADMIN] Permissões antigas removidas")
         
         # Adicionar novas permissões
         if permissions:
+            admin_user_id = session.get('user_id', 1)  # ID do admin que está fazendo a alteração
+            print(f"[ADMIN] Adicionando {len(permissions)} novas permissões")
+            
             for permission_id in permissions:
                 # Buscar ID da permissão
                 perm_query = "SELECT id FROM permissoes WHERE nome = %s"
@@ -643,13 +661,21 @@ def admin_update_user_permissions(user_id):
                 
                 if perm_result:
                     # Inserir permissão do usuário
-                    insert_query = "INSERT INTO usuario_permissoes (usuario_id, permissao_id) VALUES (%s, %s)"
-                    db.execute_query(insert_query, (user_id, perm_result[0]['id']))
+                    insert_query = "INSERT INTO usuario_permissoes (usuario_id, permissao_id, concedida_por) VALUES (%s, %s, %s)"
+                    result = db.execute_query(insert_query, (user_id, perm_result[0]['id'], admin_user_id))
+                    print(f"[ADMIN] Permissão {permission_id} adicionada (ID: {perm_result[0]['id']})")
+                else:
+                    print(f"[ADMIN] ERRO: Permissão {permission_id} não encontrada após criação")
+        else:
+            print(f"[ADMIN] Nenhuma permissão para adicionar (lista vazia)")
         
-        print(f"[ADMIN] Permissões do usuário {user_id} atualizadas: {permissions}")
+        print(f"[ADMIN] Permissões do usuário {user_id} atualizadas com sucesso: {permissions}")
         return jsonify({'success': True, 'message': 'Permissões atualizadas com sucesso'})
+        
     except Exception as e:
-        print(f"[ADMIN] Erro ao atualizar permissões: {e}")
+        print(f"[ADMIN] ERRO ao atualizar permissões: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': f'Erro ao atualizar permissões: {str(e)}'}), 500
 
 def get_predefined_permissions():

@@ -40,6 +40,14 @@
 
         function addUserInfo() {
             if (window.currentUser) {
+                // Mostrar link de admin apenas para administradores
+                if (window.currentUser.is_admin) {
+                    const adminLink = document.getElementById('admin-link');
+                    if (adminLink) {
+                        adminLink.style.display = 'block';
+                    }
+                }
+                
                 // Adicionar botão de logout e info do usuário na navbar
                 const navMenu = document.querySelector('.nav-menu');
                 const userSection = document.createElement('div');
@@ -93,6 +101,11 @@
                 <a href="/relatorios" class="nav-link">
                     <i class="fas fa-chart-bar"></i>
                     Relatórios
+                </a>
+                <!-- Link para admin - será mostrado apenas para administradores -->
+                <a href="/admin" id="admin-link" class="nav-link admin-link" style="display: none;">
+                    <i class="fas fa-users-cog"></i>
+                    Administração
                 </a>
             </div>
         </div>
